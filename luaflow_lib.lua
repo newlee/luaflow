@@ -67,6 +67,30 @@ local function process_set_enter(t, ctx)
         end
     end
 end
+local function process_block_enter(t, ctx)
+    -- `Set{ {lhs+} {expr+} }                 -- lhs1, lhs2... = e1, e2...
+    
+    for i, v in ipairs(t) do
+
+        if v.tag == "Invoke" then
+            if v[1][1] == "self" then 
+                local name = v[2][1]
+                local scope = ctx.scope[#ctx.scope]
+                local tmp1 = scope:match("([^.]+).([^.]+)")
+                local tmp2 = scope:match("([^.]+).([^.]+)", 2)
+                local f_name = concat({tmp1, tmp2, name}, ".")
+                -- table.remove(tmp,#tmp)
+                local l = ctx.call[scope]
+                if l == nil then
+                    l = {}
+                    ctx.call[scope] = l
+                end
+
+                l[#l + 1] = f_name
+            end
+        end
+    end
+end
 
 -- TODO properly decode function name
 -- For code block:
@@ -355,12 +379,26 @@ node [peripheries=1 fontname="helvetica bold" fontcolor="#ffffff"];
     return concat(t)
 end
 
+function tprint (tbl ,indent)
+if not indent then indent = 0 end
+  for k, v in pairs(tbl) do
+    formatting = string.rep("  ", indent) .. k .. ": "
+    if type(v) == "table" then
+      print(formatting)
+      tprint(v, indent+1)
+    else
+      print(formatting .. tostring(v))
+    end
+  end
+end
+
 function _M.parse_file(ctx, fname)
     local file = assert(io.open(fname))
     local s = file:read("*a")
     file:close()
 
     local t = _M.parse(ctx, s)
+    -- tprint(t)
 
     return t
 end
@@ -378,6 +416,7 @@ function _M.visit_tree(ctx, t)
         Local       = { enter = process_set_enter },
         Localrec    = { enter = process_localrec_enter },
         Pair        = { enter = process_pair_enter },
+        Block        = { enter = process_block_enter },
     }
 
     visit(t, conf, ctx)

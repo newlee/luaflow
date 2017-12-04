@@ -151,7 +151,17 @@ local function process_call_enter(t, ctx)
         error("Unexpected tag, t: " .. encode(t))
     end
     assert(type(name) == "string", "name is not string" .. encode(name))
+    if name == "NEW" then
+        name = concat({"T.", t[2][1], ".__new"},"")
+    end
 
+    if name == "NEW2" then
+        name = concat({"T.", t[2][1], ".__new2"},"")
+    end
+
+    if name == "INSTANCE" then
+        name = concat({"S.", t[2][1], ".__init"},"")
+    end
     local scope = ctx.scope[#ctx.scope]
     local l = ctx.call[scope]
     if l == nil then
@@ -416,7 +426,7 @@ function _M.visit_tree(ctx, t)
         Local       = { enter = process_set_enter },
         Localrec    = { enter = process_localrec_enter },
         Pair        = { enter = process_pair_enter },
-        Block        = { enter = process_block_enter },
+        Block       = { enter = process_block_enter },
     }
 
     visit(t, conf, ctx)
